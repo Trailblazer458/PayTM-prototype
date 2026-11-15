@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, RotateCcw, Target, TrendingUp, Wrench } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, RotateCcw, Target, TrendingUp, Wrench } from "lucide-react";
+import { useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import { FIRST_SCREEN, rewardVariants, S4_SIGNAL_EVENTS, SCREEN_COUNT, TEST4_SEGMENTS, type Toggles } from "@/lib/journey";
 import { billKindFor } from "@/lib/bills";
@@ -82,10 +83,29 @@ function Toggle({
 function Test4Picker() {
   const { state, dispatch } = useJourney();
   const inTest = TEST4_SEGMENTS.includes(state.segment);
+  // Closed by default so the segment switcher below stays in view.
+  const [open, setOpen] = useState(false);
+  const group = rewardVariants.find((v) => v.id === state.rewardVariant)?.label ?? "Guarantee only";
   return (
-    <div className="my-2 rounded-xl border border-line p-3">
-      <div className="text-[13px] font-semibold">Test 4: Guarantee vs rewards</div>
-      <p className="mt-0.5 text-[12px] leading-snug text-muted">
+    <div className="my-2 rounded-xl border border-line">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="test4-body"
+        onClick={() => setOpen((o) => !o)}
+        className="flex w-full items-center gap-2 p-3 text-left"
+      >
+        <span className="flex-1">
+          <span className="block text-[13px] font-semibold">Test 4: Guarantee vs rewards</span>
+          <span className="block text-[11px] text-muted">
+            {inTest ? `Group: ${group}, on ${state.segment}` : `Not running on ${state.segment}`}
+          </span>
+        </span>
+        <ChevronDown size={18} className={`shrink-0 text-muted transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open ? (
+      <div id="test4-body" className="px-3 pb-3">
+      <p className=" text-[12px] leading-snug text-muted">
         S2 and S4 users are split into four groups: guarantee, cashback, card rewards or nothing. Results are read separately
         for each segment.
       </p>
@@ -134,6 +154,8 @@ function Test4Picker() {
           {state.segment} is not in this test, so it always gets the guarantee. Picking a group moves the story to S2.
         </p>
       )}
+      </div>
+      ) : null}
     </div>
   );
 }
