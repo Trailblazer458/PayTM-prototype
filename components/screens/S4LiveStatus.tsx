@@ -1,11 +1,12 @@
 "use client";
 
-import { BellRing, CircleCheck, Clock, Gift, Repeat, RotateCcw, Undo2 } from "lucide-react";
+import { BellRing, CircleCheck, Clock, Gift, Repeat, RotateCcw, Sparkles, Undo2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import { rupees } from "@/lib/format";
-import { bills, board, cardReward, findCard, refundDeadline, test4Offers } from "@/lib/seed";
-import { effectiveVariant, pointsThisYear } from "@/lib/journey";
+import { profileFor } from "@/lib/bills";
+import { cardReward, findCard, refundDeadline, test4Offers } from "@/lib/seed";
+import { amountFor, effectiveVariant, pointsThisYear } from "@/lib/journey";
 import { RewardsPopup } from "@/components/ui/RewardsPopup";
 import { AutoPaySetup } from "@/components/ui/AutoPaySetup";
 import { AppHeader, Button } from "@/components/ui/kit";
@@ -14,9 +15,11 @@ import { StatusTracker, type StepState } from "@/components/ui/StatusTracker";
 
 type Phase = "paid" | "sent" | "confirmed" | "stuck" | "refunded";
 
+/** Screen 4: live status for the first payment. Same design for electricity, metro card and card bill. */
 export function S4LiveStatus() {
   const { state, dispatch, showToast } = useJourney();
-  const amount = bills.nov.amount;
+  const p = profileFor(state.segment);
+  const amount = amountFor(state, "nov");
   const alreadyConfirmed = state.payments.nov === "confirmed";
   const [phase, setPhase] = useState<Phase>(alreadyConfirmed ? "confirmed" : state.payments.nov === "refunded" ? "refunded" : "paid");
   const [attempt, setAttempt] = useState(1);
@@ -59,10 +62,10 @@ export function S4LiveStatus() {
     };
   }, [attempt, dispatch]);
 
-  // Paid by credit card: the card's reward pops up a moment after the board confirms.
+  // Paid by credit card: the card's reward pops up a moment after the payment is confirmed.
   const [justConfirmed, setJustConfirmed] = useState(false);
   const [showReward, setShowReward] = useState(false);
-  const card = findCard(state.payMethods.nov);
+  const card = p.allowCard ? findCard(state.payMethods.nov) : undefined;
   const variant = effectiveVariant(state);
   const bonus = variant === "card_rewards" && card ? test4Offers.card_rewards.split(" when ")[0] : undefined;
   useEffect(() => {
@@ -85,15 +88,11 @@ export function S4LiveStatus() {
   const steps = [
     step("Paid", card ? `${rupees(amount)} from your ${card.name} •• ${card.last4}` : `${rupees(amount)} by UPI from your bank account`, "done"),
     step(
-      `Sent to ${board.short}`,
-      phase === "stuck" || phase === "refunded" ? "Waiting for the board" : "Board received the payment",
+      `Sent to ${p.biller}`,
+      phase === "stuck" || phase === "refunded" ? `Waiting for ${p.confirmer}` : p.sentSub,
       phase === "paid" ? "active" : phase === "stuck" ? "stuck" : phase === "refunded" ? "stuck" : "done",
     ),
-    step(
-      "Confirmed by the board",
-      phase === "confirmed" ? "Your account with the board is updated" : undefined,
-      phase === "confirmed" ? "done" : phase === "sent" ? "active" : "waiting",
-    ),
+    step(p.confirmedStep, phase === "confirmed" ? p.confirmedSub : undefined, phase === "confirmed" ? "done" : phase === "sent" ? "active" : "waiting"),
   ];
 
   return (
@@ -102,7 +101,7 @@ export function S4LiveStatus() {
       <div className="flex-1 space-y-4 overflow-y-auto px-4 pb-6 pt-4 no-scrollbar">
         <div className="text-center">
           <div className="text-[13px] text-muted">
-            {board.short} electricity, {bills.nov.month}
+            {p.billName}, {p.label.nov}
           </div>
           <div className="text-[28px] font-bold">{rupees(amount)}</div>
         </div>
@@ -116,11 +115,16 @@ export function S4LiveStatus() {
             <div className="anim-rise flex items-start gap-2.5 rounded-2xl bg-ok-soft p-4">
               <CircleCheck size={22} className="shrink-0 text-ok" />
               <div>
-                <div className="text-[15px] font-bold">Your {board.short} bill is paid and confirmed.</div>
-                <div className="text-[12px] text-muted">Board reference UP2611130042</div>
+                <div className="text-[15px] font-bold">{p.confirmedTitle}</div>
+                <div className="text-[12px] text-muted">{p.reference}</div>
                 {variant === "cashback" ? (
                   <div className="mt-1 flex items-center gap-1 text-[12px] font-semibold text-warn">
                     <Gift size={13} /> ₹25 cashback is on its way
+                  </div>
+                ) : null}
+                {variant === "card_rewards" && p.kind === "cardbill" ? (
+                  <div className="mt-1 flex items-center gap-1 text-[12px] font-semibold text-warn">
+                    <Sparkles size={13} /> 500 bonus reward points added to your card
                   </div>
                 ) : null}
               </div>
@@ -128,12 +132,10 @@ export function S4LiveStatus() {
 
             <section className="anim-rise rounded-2xl border-2 border-sky p-4" style={{ animationDelay: "250ms" }}>
               <div className="flex items-center gap-2 text-[15px] font-bold">
-                <BellRing size={18} className="text-sky" /> Reminder is on for next month
+                <BellRing size={18} className="text-sky" /> {p.reminderTitle}
               </div>
-              <p className="mt-1.5 text-[14px] leading-snug">
-                You&apos;ll be reminded for the bill next month. To turn this off, go to Settings &gt; Notifications.
-              </p>
-              <p className="mt-1.5 text-[12px] text-muted">At most 2 reminders a month, only when a bill is unpaid and due.</p>
+              <p className="mt-1.5 text-[14px] leading-snug">{p.reminderBody}</p>
+              <p className="mt-1.5 text-[12px] text-muted">{p.reminderRule}</p>
               <Button className="mt-3" onClick={() => dispatch({ type: "REMINDER_CHOICE", value: "yes" })}>
                 Got it
               </Button>
@@ -141,11 +143,9 @@ export function S4LiveStatus() {
 
             <section className="anim-rise rounded-2xl bg-card p-4" style={{ animationDelay: "400ms" }}>
               <div className="flex items-center gap-2 text-[15px] font-bold">
-                <Repeat size={18} className="text-sky" /> Avoid reminders and set up AutoPay
+                <Repeat size={18} className="text-sky" /> {p.earlyTitle}
               </div>
-              <p className="mt-1.5 text-[13px] leading-snug text-muted">
-                Paytm pays this bill on the due date, within a limit you pick. You get a message 24 hours before each debit.
-              </p>
+              <p className="mt-1.5 text-[13px] leading-snug text-muted">{p.earlyBody}</p>
               <Button
                 variant="secondary"
                 className="mt-3"
@@ -154,7 +154,7 @@ export function S4LiveStatus() {
                   setAutopayOpen(true);
                 }}
               >
-                Set up AutoPay
+                Set up {p.autopayName}
               </Button>
             </section>
           </>
@@ -170,10 +170,14 @@ export function S4LiveStatus() {
               automatically.
             </p>
             <p className="mt-2 text-[12px] text-muted">You do not need to call anyone or raise a complaint.</p>
-            <Button variant="ghost" className="mt-3" onClick={() => {
-              setPhase("refunded");
-              dispatch({ type: "REFUNDED", bill: "nov" });
-            }}>
+            <Button
+              variant="ghost"
+              className="mt-3"
+              onClick={() => {
+                setPhase("refunded");
+                dispatch({ type: "REFUNDED", bill: "nov" });
+              }}
+            >
               Skip to tomorrow, {refundDeadline.replace(" tomorrow", "")}
             </Button>
           </section>
@@ -185,9 +189,7 @@ export function S4LiveStatus() {
               <div className="flex items-center gap-2 text-[15px] font-bold">
                 <Undo2 size={18} className="text-ok" /> {rupees(amount)} is back in your account
               </div>
-              <p className="mt-1.5 text-[13px] leading-snug">
-                Refunded automatically, within 24 hours as promised. Your {board.short} bill is still due on {bills.nov.dueLong}.
-              </p>
+              <p className="mt-1.5 text-[13px] leading-snug">Refunded automatically, within 24 hours as promised. {p.stillDue}</p>
             </div>
             <Button onClick={() => setPinOpen(true)}>
               <RotateCcw size={17} /> Try again now
@@ -199,21 +201,20 @@ export function S4LiveStatus() {
       {autopayOpen ? (
         <div className="anim-sheet absolute inset-0 z-30">
           <AutoPaySetup
+            profile={p}
             onBack={() => setAutopayOpen(false)}
             onNotNow={() => setAutopayOpen(false)}
             onConfirm={(cap) => {
               dispatch({ type: "AUTOPAY_SET_UP", cap, source: "early" });
-              showToast("AutoPay is on. No reminders needed for this bill.");
+              showToast(`${p.autopayName} is on. No reminders needed.`);
             }}
             intro={
               <>
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-soft text-sky">
                   <Repeat size={26} />
                 </div>
-                <h1 className="mt-3 text-[20px] font-bold leading-tight">Skip the reminders. Put electricity on AutoPay</h1>
-                <p className="mt-1 text-[14px] text-muted">
-                  From December, Paytm pays your {board.short} bill on the due date, within the limit you pick.
-                </p>
+                <h1 className="mt-3 text-[20px] font-bold leading-tight">{p.earlyIntroTitle}</h1>
+                <p className="mt-1 text-[14px] text-muted">{p.earlyIntroBody}</p>
               </>
             }
           />
@@ -226,13 +227,14 @@ export function S4LiveStatus() {
           amount={amount}
           bonus={bonus}
           yearTotal={state.segment === "S4" ? pointsThisYear(state) : undefined}
-          onClose={() => setShowReward(false)} />
+          onClose={() => setShowReward(false)}
+        />
       ) : null}
 
       <DemoPinSheet
         open={pinOpen}
         amount={amount}
-        payee={`${board.short} electricity, ${bills.nov.month}`}
+        payee={`${p.billName}, ${p.label.nov}`}
         onClose={() => setPinOpen(false)}
         onDone={onRetryPin}
       />

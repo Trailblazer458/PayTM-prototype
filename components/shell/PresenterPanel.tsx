@@ -3,6 +3,7 @@
 import { ChevronLeft, ChevronRight, RotateCcw, Target, TrendingUp, Wrench } from "lucide-react";
 import { useJourney } from "@/hooks/useJourney";
 import { FIRST_SCREEN, rewardVariants, S4_SIGNAL_EVENTS, SCREEN_COUNT, TEST4_SEGMENTS, type Toggles } from "@/lib/journey";
+import { billKindFor } from "@/lib/bills";
 import { metaFor, NEXT_BILL_LINE, screen1Note, screen8RewardNote, screens, segments } from "@/lib/screens";
 import { Wordmark } from "@/components/ui/kit";
 
@@ -194,7 +195,7 @@ export function StepNav({
 
 export function PresenterPanel() {
   const { state, dispatch } = useJourney();
-  const m = metaFor(state.screen);
+  const m = metaFor(state.screen, billKindFor(state.segment));
   const note =
     state.screen === 1
       ? screen1Note(state.segment)

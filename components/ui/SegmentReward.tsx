@@ -55,7 +55,7 @@ function PointsTracker() {
       <p className="mt-1 text-[13px] text-muted">
         {now > 0
           ? `${now.toLocaleString("en-IN")} of them this month and last, with your ${leadCard.name} •• ${leadCard.last4}.`
-          : `Pay your next bill with your ${leadCard.name} •• ${leadCard.last4} to add to it.`}
+          : `Bills you pay here with your ${leadCard.name} •• ${leadCard.last4} add to it, like electricity or your phone.`}
       </p>
       <p className="mt-2 text-[10px] text-muted">Fictional card and example reward rate for this prototype.</p>
     </section>

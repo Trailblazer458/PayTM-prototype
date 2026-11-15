@@ -3,7 +3,7 @@
 import { BellRing, CalendarCheck, Lock, X } from "lucide-react";
 import { useCallback, useState, type ReactNode } from "react";
 import { rupees } from "@/lib/format";
-import { autopayCaps, bills, board, customCapMax, customCapMin } from "@/lib/seed";
+import { electricityProfile, type BillProfile } from "@/lib/bills";
 import { AppHeader, BottomSheet, Button } from "./kit";
 import { DemoPinSheet } from "./DemoPinSheet";
 
@@ -15,11 +15,14 @@ type Pick = number | "custom" | null;
  */
 export function AutoPaySetup({
   intro,
+  profile: p = electricityProfile,
   onBack,
   onConfirm,
   onNotNow,
 }: {
   intro: ReactNode;
+  /** Limits and wording for this bill: electricity, metro card or card bill. */
+  profile?: BillProfile;
   onBack: () => void;
   onConfirm: (cap: number) => void;
   onNotNow: () => void;
@@ -30,9 +33,8 @@ export function AutoPaySetup({
   const [pinOpen, setPinOpen] = useState(false);
 
   const customValue = Number(custom.replace(/\D/g, ""));
-  const customOk = customValue >= customCapMin && customValue <= customCapMax;
+  const customOk = customValue >= p.customMin && customValue <= p.customMax;
   const cap = pick === "custom" ? (customOk ? customValue : null) : pick;
-  const highest = Math.max(bills.nov.amount, bills.dec.amount);
 
   const onPin = useCallback(() => {
     setPinOpen(false);
@@ -46,11 +48,9 @@ export function AutoPaySetup({
         {intro}
 
         <h2 className="mt-6 text-[15px] font-bold">The most Paytm may ever debit</h2>
-        <p className="mt-0.5 text-[12px] text-muted">
-          Your bills have been up to {rupees(highest)}. Pick a limit you are comfortable with.
-        </p>
+        <p className="mt-0.5 text-[12px] text-muted">{p.capHint}</p>
         <div className="mt-3 grid grid-cols-4 gap-2" role="radiogroup" aria-label="AutoPay limit">
-          {[...autopayCaps, "custom" as const].map((c) => {
+          {[...p.caps, "custom" as const].map((c) => {
             const on = pick === c;
             return (
               <button
@@ -73,15 +73,15 @@ export function AutoPaySetup({
             <input
               inputMode="numeric"
               autoFocus
-              placeholder={`${rupees(customCapMin)} to ${rupees(customCapMax)}`}
+              placeholder={`${rupees(p.customMin)} to ${rupees(p.customMax)}`}
               value={custom ? rupees(customValue) : ""}
-              onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 5))}
+              onChange={(e) => setCustom(e.target.value.replace(/\D/g, "").slice(0, 6))}
               className="w-full rounded-xl border-2 border-line px-4 py-3 text-[17px] font-semibold outline-none focus:border-sky"
               aria-label="Custom limit"
             />
             {custom && !customOk ? (
               <div className="mt-1 text-[12px] text-warn">
-                Pick between {rupees(customCapMin)} and {rupees(customCapMax)}.
+                Pick between {rupees(p.customMin)} and {rupees(p.customMax)}.
               </div>
             ) : null}
           </div>
@@ -105,20 +105,20 @@ export function AutoPaySetup({
           Not now
         </Button>
         <Button disabled={!cap} onClick={() => setReviewOpen(true)}>
-          Set up AutoPay
+          Set up {p.autopayName}
         </Button>
       </div>
 
       <BottomSheet open={reviewOpen} onClose={() => setReviewOpen(false)} title="Before you approve">
         <div className="rounded-2xl bg-sky-soft p-4 text-[15px] leading-snug">
-          Paytm will never debit more than <strong>{cap ? rupees(cap) : ""}</strong> (the cap you chose). You get a message
-          24 hours before each debit. Cancel any time from Bills.
+          Paytm will never debit more than <strong>{cap ? rupees(cap) : ""}</strong> a month (the cap you chose). You get a
+          message 24 hours before each debit. Cancel any time from Bills.
         </div>
         <dl className="mt-3 grid grid-cols-2 gap-y-2 text-[13px]">
           <dt className="text-muted">Bill</dt>
-          <dd className="text-right font-semibold">{board.short} electricity</dd>
+          <dd className="text-right font-semibold">{p.billName}</dd>
           <dt className="text-muted">Pays</dt>
-          <dd className="text-right font-semibold">The bill amount, on the due date</dd>
+          <dd className="text-right font-semibold">{p.paysText}</dd>
           <dt className="text-muted">Limit</dt>
           <dd className="text-right font-semibold">{cap ? rupees(cap) : ""} a month</dd>
         </dl>
@@ -140,8 +140,8 @@ export function AutoPaySetup({
       <DemoPinSheet
         open={pinOpen}
         amount={cap ?? 0}
-        purpose="Approve AutoPay with a limit of"
-        payee={`${board.short} electricity, every month`}
+        purpose={`Approve ${p.autopayName} with a limit of`}
+        payee={p.payeeEveryMonth}
         onClose={() => setPinOpen(false)}
         onDone={onPin}
       />

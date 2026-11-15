@@ -29,7 +29,6 @@ import {
   cardBill,
   cardReward,
   leadCard,
-  metroCard,
   otherBills,
   persona,
   recharge,
@@ -151,7 +150,7 @@ export function BillSuggestionCard() {
     S3: {
       Icon: TrainFront,
       title: "Top up your metro card here too",
-      body: `Your ${metroCard.name} ${metroCard.number} has ${rupees(metroCard.balance)} left. Top up ${rupees(metroCard.topUp)} in 2 taps and we'll remind you when it runs low.`,
+      body: "Add your metro card once and top up in 2 taps. We'll remind you when it's usually time to top up.",
       cta: "Top up metro card",
     },
     S4: {
@@ -173,14 +172,13 @@ export function BillSuggestionCard() {
         : null;
   const bannerIsGuarantee = seg === "S2" && s2.guarantee;
 
-  const [handoffOpen, setHandoffOpen] = useState(false);
   const go = () => {
     // A lapsed payer already has the bill saved, so the number is filled in.
     if (seg === "S2") dispatch({ type: "SET_CONSUMER_NUMBER", value: board.consumerNumber.replace(/\D/g, "") });
     dispatch({ type: "SUGGESTION_TAPPED" });
   };
-  // S3 and S4 suggest a different bill. The rest of the demo uses electricity as the worked example.
-  const onTap = () => (seg === "S3" || seg === "S4" ? setHandoffOpen(true) : go());
+  // Each segment's next bill has its own screens 2 to 8 (electricity, metro card or card bill).
+  const onTap = go;
 
   const openRewards = () => {
     openedAt.current = Date.now();
@@ -230,22 +228,6 @@ export function BillSuggestionCard() {
         </div>
       ) : null}
       <CardRewardsSheet open={rewardsOpen} onClose={closeRewards} />
-      <BottomSheet open={handoffOpen} onClose={() => setHandoffOpen(false)} title="This demo continues with electricity">
-        <p className="text-[14px] leading-snug">
-          {seg === "S3"
-            ? "The next bill is chosen per segment. For you it is the metro card. To keep the demo short, the next steps use the electricity bill as the example. The same steps work for a metro card."
-            : "The next bill is chosen per segment. For you it is the credit card bill. To keep the demo short, the next steps use the electricity bill as the example, paid with your card."}
-        </p>
-        <Button
-          className="mt-4"
-          onClick={() => {
-            setHandoffOpen(false);
-            go();
-          }}
-        >
-          Continue with electricity
-        </Button>
-      </BottomSheet>
     </section>
   );
 }

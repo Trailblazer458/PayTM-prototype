@@ -1,6 +1,10 @@
 "use client";
 
 import type { ScreenNo } from "@/lib/journey";
+import { billKindFor } from "@/lib/bills";
+import { useJourney } from "@/hooks/useJourney";
+import { MetroAdd, MetroPay } from "./MetroScreens";
+import { CardPay, CardPick } from "./CardBillScreens";
 import { S0Home } from "./S0Home";
 import { S1RechargeSuccess } from "./S1RechargeSuccess";
 import { S2AddBill } from "./S2AddBill";
@@ -12,6 +16,13 @@ import { S7BillsTab } from "./S7BillsTab";
 import { S8MonthlySummary } from "./S8MonthlySummary";
 
 export function ScreenView({ screen }: { screen: ScreenNo }) {
+  const { state } = useJourney();
+  // Screens 2 and 3 have their own layout per bill: electricity (S1, S2), metro card (S3), card bill (S4).
+  const kind = billKindFor(state.segment);
+  if (screen === 2 && kind === "metro") return <MetroAdd />;
+  if (screen === 3 && kind === "metro") return <MetroPay />;
+  if (screen === 2 && kind === "cardbill") return <CardPick />;
+  if (screen === 3 && kind === "cardbill") return <CardPay />;
   switch (screen) {
     case 0:
       return <S0Home />;

@@ -1,18 +1,22 @@
 "use client";
 
-import { BellRing, CircleCheck, Clock, Repeat, Wifi } from "lucide-react";
+import { BellRing, CircleCheck, Clock, Repeat } from "lucide-react";
 import { useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import type { JourneyState } from "@/lib/journey";
 import { rupees } from "@/lib/format";
-import { bills, board, otherBills, summaryMonth } from "@/lib/seed";
+import { summaryMonth } from "@/lib/seed";
+import { profileFor } from "@/lib/bills";
+import { householdFor, type HouseItem } from "@/lib/household";
+import { itemIcons } from "./S7BillsTab";
 import { AppHeader, Button, Wordmark } from "@/components/ui/kit";
 import { SegmentReward } from "@/components/ui/SegmentReward";
 
 /** The push preview. Never shows amounts. */
 export function previewText(s: JourneyState): string {
   const tail = s.autopay.status === "active" ? "1 more could be paid here." : "1 more could be on autopilot.";
-  return `${summaryMonth} sorted: 3 bills paid on time. ${tail}`;
+  const home = householdFor(profileFor(s.segment).kind);
+  return `${summaryMonth} sorted: ${home.paidCount} ${home.paidNoun}. ${tail}`;
 }
 
 function LockScreen({ onOpen, text }: { onOpen: () => void; text: string }) {
@@ -65,7 +69,13 @@ export function S8MonthlySummary() {
   const { state, dispatch } = useJourney();
   const [open, setOpen] = useState(false);
   const autopayOn = state.autopay.status === "active";
+  const p = profileFor(state.segment);
+  const home = householdFor(p.kind);
   const ok = <CircleCheck size={18} className="shrink-0 text-ok" />;
+  const iconOf = (it: HouseItem, cls: string) => {
+    const Icon = itemIcons[it.icon];
+    return <Icon size={18} className={`shrink-0 ${cls}`} />;
+  };
 
   if (!open) {
     return (
@@ -79,28 +89,35 @@ export function S8MonthlySummary() {
     );
   }
 
+  const paid = home.items.filter((it) => it.status === "journey" || it.status === "paid");
+  const outside = home.items.filter((it) => it.status === "outside");
+  const due = home.items.filter((it) => it.status === "due");
+  const journey = home.items.find((it) => it.status === "journey");
+
   return (
     <div className="flex h-full flex-col">
       <AppHeader title={`${summaryMonth} bills`} onBack={() => setOpen(false)} />
       <div className="flex-1 space-y-5 overflow-y-auto px-4 pb-6 pt-4 no-scrollbar">
         <div className="anim-rise rounded-2xl bg-ok-soft p-4">
           <div className="text-[22px] font-bold">{summaryMonth} sorted</div>
-          <div className="text-[14px]">3 bills paid on time on Paytm.</div>
+          <div className="text-[14px]">
+            {home.paidCount} {home.paidNoun} on Paytm.
+          </div>
         </div>
 
         <SegmentReward />
 
         <Section title="Paid on Paytm">
-          <Item icon={ok} label={`${board.short} electricity`} right={`${rupees(bills.dec.amount)}, on time`} />
-          <Item icon={ok} label={otherBills.maa.name} right={`${rupees(otherBills.maa.amount)}, on time`} />
-          <Item icon={ok} label={otherBills.own.name} right={`${rupees(otherBills.own.amount)}, on time`} />
+          {paid.map((it) => (
+            <Item key={it.id} icon={ok} label={it.title} right={it.summary} />
+          ))}
         </Section>
 
         <Section title="On autopilot">
-          {autopayOn ? (
+          {autopayOn && journey ? (
             <Item
               icon={<Repeat size={18} className="shrink-0 text-sky" />}
-              label={`${board.short} electricity`}
+              label={journey.title}
               right={`cap ${rupees(state.autopay.cap ?? 0)}`}
             />
           ) : (
@@ -109,11 +126,17 @@ export function S8MonthlySummary() {
         </Section>
 
         <Section title="Paid outside Paytm">
-          <Item icon={<Wifi size={18} className="shrink-0 text-muted" />} label={otherBills.airtel.name} right="Paid elsewhere" />
+          {outside.map((it) => (
+            <Item key={it.id} icon={iconOf(it, "text-muted")} label={it.title} right={it.summary} />
+          ))}
         </Section>
 
         <Section title="Pending">
-          <Item icon={<Clock size={18} className="shrink-0 text-warn" />} label={otherBills.rakesh.name} right="Due 3 Jan" />
+          {due.length ? (
+            due.map((it) => <Item key={it.id} icon={<Clock size={18} className="shrink-0 text-warn" />} label={it.title} right={it.summary} />)
+          ) : (
+            <li className="rounded-xl border border-dashed border-line px-3 py-2.5 text-[13px] text-muted">Nothing pending</li>
+          )}
         </Section>
 
         <NextAction />
@@ -125,35 +148,37 @@ export function S8MonthlySummary() {
 function NextAction() {
   const { state, dispatch } = useJourney();
   const autopayOn = state.autopay.status === "active";
+  const p = profileFor(state.segment);
+  const home = householdFor(p.kind);
 
-  // Electricity has been paid on Paytm twice, so it can go on autopilot.
+  // The journey bill has been paid on Paytm twice, so it can go on autopilot.
   if (!autopayOn) {
     return (
       <section className="rounded-2xl border-2 border-sky p-4">
         <div className="text-[12px] font-semibold uppercase tracking-wide text-sky-dark">Your next step</div>
-        <div className="mt-1 text-[15px] font-bold">Put electricity on autopilot</div>
+        <div className="mt-1 text-[15px] font-bold">Put {p.shortName} on autopilot</div>
         <p className="mt-0.5 text-[13px] text-muted">Paid on Paytm two months in a row. You choose the limit.</p>
         <Button
           className="mt-3"
           onClick={() => {
-            dispatch({ type: "LOG", name: "summary_action_tapped", detail: "autopay electricity" });
+            dispatch({ type: "LOG", name: "summary_action_tapped", detail: `autopay ${p.kind}` });
             dispatch({ type: "GOTO", screen: 6 });
           }}
         >
-          Put electricity on autopilot
+          Put {p.shortName} on autopilot
         </Button>
       </section>
     );
   }
 
-  // Airtel postpaid has never been paid on Paytm, so the next step is a reminder, not AutoPay.
+  // The bill paid outside Paytm has never been paid here, so the next step is a reminder, not AutoPay.
   return (
     <section className="rounded-2xl border-2 border-sky p-4">
       <div className="text-[12px] font-semibold uppercase tracking-wide text-sky-dark">Your next step</div>
-      <div className="mt-1 text-[15px] font-bold">Bring {otherBills.airtel.name} to Paytm</div>
+      <div className="mt-1 text-[15px] font-bold">Bring {home.outside.name} to Paytm</div>
       {state.airtel === "remind" ? (
         <div className="mt-2 flex items-center gap-2 text-[13px] font-semibold text-ok">
-          <BellRing size={16} /> Reminder set. One message when the bill is due.
+          <BellRing size={16} /> Reminder set. One message when it is next due.
         </div>
       ) : (
         <>
@@ -161,7 +186,7 @@ function NextAction() {
           <Button
             className="mt-3"
             onClick={() => {
-              dispatch({ type: "LOG", name: "summary_action_tapped", detail: "remind airtel" });
+              dispatch({ type: "LOG", name: "summary_action_tapped", detail: "remind paid outside" });
               dispatch({ type: "AIRTEL_CHOICE", value: "remind" });
             }}
           >

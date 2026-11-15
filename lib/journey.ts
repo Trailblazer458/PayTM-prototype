@@ -1,5 +1,6 @@
 import type { BillKey } from "./seed";
 import { bills, board, findCard, pointsEarlierThisYear, savedCards } from "./seed";
+import { profileFor } from "./bills";
 
 /** Journey screens 1 to 8. Screen 0 is the home screen that comes before them. */
 export const SCREEN_COUNT = 8;
@@ -41,6 +42,8 @@ export interface JourneyState {
   rewardVariant: RewardVariant;
   /** How each bill was paid: "upi" or a saved card id. */
   payMethods: Record<BillKey, PayMethod>;
+  /** Amount picked for each payment, where she can choose it (metro top-up, card bill). Empty means the default. */
+  amounts: Partial<Record<BillKey, number>>;
   consumerNumber: string;
   billerAdded: boolean;
   payments: Record<BillKey, PaymentStatus>;
@@ -60,8 +63,9 @@ export type Action =
   | { type: "GOTO"; screen: number }
   | { type: "SUGGESTION_TAPPED" }
   | { type: "SET_CONSUMER_NUMBER"; value: string }
-  | { type: "BILLER_ADDED"; via: "typed" | "family" }
-  | { type: "PAYMENT_STARTED"; bill: BillKey; method?: PayMethod }
+  /** saved_card: an S4 card already saved on Paytm, so there is no number to type. */
+  | { type: "BILLER_ADDED"; via: "typed" | "family" | "saved_card" }
+  | { type: "PAYMENT_STARTED"; bill: BillKey; method?: PayMethod; amount?: number }
   /** For a payment already started (quick pay): she has now picked how to pay. */
   | { type: "PAY_METHOD_CHOSEN"; bill: BillKey; method: PayMethod }
   | { type: "PAYMENT_CONFIRMED"; bill: BillKey; via?: "autopay" }
@@ -88,6 +92,7 @@ export const initialState: JourneyState = {
   toggles: { failurePath: false, showEvents: false, paytmToday: false },
   rewardVariant: "guarantee",
   payMethods: { nov: "upi", dec: "upi" },
+  amounts: {},
   consumerNumber: "",
   billerAdded: false,
   payments: { nov: "none", dec: "none" },
@@ -139,6 +144,11 @@ export function fillPrerequisites(s: JourneyState, target: ScreenNo): JourneySta
 function log(s: JourneyState, name: string, detail?: string): JourneyState {
   const ev: MetricEvent = { id: s.nextEventId, name, screen: s.screen, detail };
   return { ...s, events: [...s.events, ev], nextEventId: s.nextEventId + 1 };
+}
+
+/** What this payment is for: the amount she picked, or the bill's default. */
+export function amountFor(s: JourneyState, bill: BillKey): number {
+  return s.amounts[bill] ?? profileFor(s.segment).amounts[bill];
 }
 
 /** S4 card points tracker: points earned on bills paid here with a points card, confirmed in this journey. */
@@ -209,13 +219,14 @@ export function reducer(s: JourneyState, a: Action): JourneyState {
       return { ...s, consumerNumber: a.value };
 
     case "BILLER_ADDED": {
-      if (s.consumerNumber.replace(/\D/g, "").length < 10) return s;
+      if (a.via !== "saved_card" && s.consumerNumber.replace(/\D/g, "").length < 10) return s;
       return goTo(log({ ...s, billerAdded: true }, "biller_added", `via ${a.via}`), 3);
     }
 
     case "PAYMENT_STARTED": {
       if (s.payments[a.bill] === "confirmed") return a.bill === "nov" && s.screen === 3 ? { ...s, screen: 4 } : s;
       const method = a.method ?? s.payMethods[a.bill] ?? "upi";
+      if (a.amount) s = { ...s, amounts: { ...s.amounts, [a.bill]: a.amount } };
       const name = a.bill === "nov" ? "first_payment_started" : "reminder_payment_started";
       const detail = a.bill === "nov" ? variantTag(s) : undefined;
       let next = log({ ...s, payments: { ...s.payments, [a.bill]: "pending" } }, name, detail);
@@ -316,6 +327,7 @@ export function parseStored(raw: string | null): JourneyState | null {
       ...p,
       toggles,
       payMethods: { ...initialState.payMethods, ...p.payMethods },
+      amounts: { ...p.amounts },
       screen: clampScreen(p.screen),
     };
   } catch {

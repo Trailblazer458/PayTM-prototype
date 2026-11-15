@@ -87,10 +87,37 @@ export function cardLabel(card: SavedCard): string {
 export const soloRecharge = { amount: 199, number: "99XXX XX552", operator: "Jio", plan: "20 days, 1 GB a day" };
 
 /** S3 next bill: a metro card recharge. Fictional card number, generic city metro. */
-export const metroCard = { name: "Metro card", number: "•• 7710", balance: 40, topUp: 300 };
+export const metroCard = {
+  name: "Metro card",
+  number: "•• 7710",
+  fullNumber: "3071 5528 64",
+  balance: 40,
+  topUp: 300,
+  minTopUp: 100,
+  step: 50,
+  maxTopUp: 2000,
+};
 
-/** S4 next bill: her credit card bill (on the lead card). */
-export const cardBill = { amount: 18450, due: "28 Nov" };
+/** S4 next bill: her credit card bills. The lead card is the one the story follows. */
+export const cardBill = {
+  amount: 18450,
+  minimum: 920,
+  due: "28 Nov",
+  decAmount: 15780,
+  decDue: "28 Dec",
+  lateFeeCap: 500,
+  /** Points this statement's spends earned on the card. Example rate. */
+  statementPoints: 9225,
+};
+
+/** Her other card bills, for the S4 Bills tab and summary. */
+export const otherCardBills = {
+  tarang: { amount: 7340, due: "2 Dec" },
+  neelgiri: { amount: 4120, due: "Due in 5 days" },
+};
+
+/** S3's other bills, for the Bills tab and summary. Generic streaming service. */
+export const streamingPlan = { name: "StreamBox Premium", amount: 149, renewed: "5 Dec" };
 
 /** S4 card points tracker: points already earned on bills paid here this year, before this journey. */
 export const pointsEarlierThisYear = 6380;
@@ -137,6 +164,7 @@ export const coupons = {
 export const test4Offers = {
   cashback: "₹25 cashback on this bill",
   card_rewards: "500 bonus reward points when you pay this bill with a credit card",
+  card_rewards_card_bill: "500 bonus reward points on your card when you pay this bill here",
 };
 
 /** Screens 5 to 8 happen in December. */

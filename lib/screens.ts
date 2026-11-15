@@ -169,6 +169,75 @@ export function screen8RewardNote(segment: string): string {
   return `Reward for ${segment}: a progress meter, 3 of 4 home bills sorted. No coins, no scratch cards, no lucky draws.`;
 }
 
-export function metaFor(no: number): ScreenMeta {
-  return screens.find((m) => m.no === no) ?? screens[0];
+/**
+ * S3 (metro card) and S4 (credit card bill) follow their own bill through screens 2 to 8.
+ * These replace the electricity wording. Barrier codes stay the same.
+ */
+const overrides: Record<"metro" | "cardbill", Partial<Record<number, Partial<ScreenMeta>>>> = {
+  metro: {
+    2: {
+      name: "Add a metro card with just its number",
+      change:
+        "Today she finds the metro card screen inside the bill grid and types the number with no help. Here the metro is chosen from her city and a sample card shows where the number sits.",
+      metric: "Metro cards added per card tap",
+    },
+    3: {
+      name: "Top up, with the payment guarantee",
+      change:
+        "Today a gold coin offer sits on the top-up screen and nothing says what happens if the top-up fails. Here the guarantee replaces the coins, and the Add Value Machine (AVM) step is explained.",
+      metric: "First top-up within 7 days, confirmed first time",
+      note: "The Reserve Bank of India (RBI) floor for refunds is 5 days. We promise 24 hours. Paying by UPI (Unified Payments Interface) is free.",
+    },
+    4: { change: "Today a stuck top-up just says pending. Here she sees each step and knows to tap her card at a station to collect it." },
+    5: {
+      barrier: "B1: The prompt to top up comes from the station gate, not Paytm",
+      change:
+        "Today the cue is a gate that says the balance is low, at the station. Here Paytm sends the cue around when she usually tops up, before she reaches the gate.",
+      metric: "Top-ups started by a Paytm reminder",
+    },
+    6: {
+      name: "Auto top-up offered after the second top-up",
+      change: "Today auto top-up is not offered. Here it comes after two good top-ups, with a monthly limit she picks before the PIN.",
+      metric: "Auto top-up set up after the 2nd top-up",
+    },
+    7: {
+      barrier: "B10: A payment made elsewhere doesn't show",
+      change:
+        "Today a subscription paid on another app just goes quiet. Here Paytm spots that her saved streaming plan renewed without a Paytm payment and invites it back once.",
+    },
+    8: { change: "Today there is no monthly view. Here one summary shows her top-ups, recharges and the plan paid elsewhere, with one next action." },
+  },
+  cardbill: {
+    2: {
+      name: "Pick a saved card, no number to type",
+      barrier: "B7: Card details not in hand",
+      change:
+        "Today she picks from saved cards next to a cashback draw. Here her saved cards come first, other cards can be found from her credit report with consent, and there is no draw.",
+      metric: "Card bills added per card tap",
+    },
+    3: {
+      name: "Card bill fetched, with the payment guarantee",
+      change:
+        "Today the amount screen shows a count of offers. Here it shows the guarantee, the points this statement earned, and a plain warning that paying less than the total means interest.",
+      metric: "First card bill paid within 7 days, confirmed first time",
+      note: "The Reserve Bank of India (RBI) floor for refunds is 5 days. We promise 24 hours. Card bills are paid by UPI (Unified Payments Interface) from the bank account.",
+    },
+    4: { change: "Today a stuck card payment just says pending. Here she sees each step and knows when her limit is restored." },
+    5: {
+      barrier: "B1: Each card bill's prompt comes from the bank",
+      change: "Today the bank's statement email is the cue, so the bank's app gets the payment. Here Paytm sends the cue, only when the bill is unpaid and due.",
+    },
+    6: { change: "Today AutoPay asks for a mandate up front. Here it comes after two good payments, pays the total due, and she picks the cap before the PIN." },
+    7: {
+      barrier: "B10: A payment made elsewhere doesn't show",
+      change: "Today a card bill paid in the bank's app just goes quiet. Here Paytm spots it from the bill fetch, without reading SMS texts, and invites it back once.",
+    },
+    8: { change: "Today there is no monthly view across cards. Here one summary shows which card bills are paid, where, and what is next." },
+  },
+};
+
+export function metaFor(no: number, kind: "electricity" | "metro" | "cardbill" = "electricity"): ScreenMeta {
+  const base = screens.find((m) => m.no === no) ?? screens[0];
+  const extra = kind === "electricity" ? undefined : overrides[kind][no];
+  return extra ? { ...base, ...extra } : base;
 }

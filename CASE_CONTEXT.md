@@ -43,6 +43,8 @@ Chosen: S1 Household manager (primary, recharges 2+ numbers), S2 Lapsed bill pay
 | S3 Solo young recharger | Metro card recharge or an OTT (over-the-top streaming) subscription |
 | S4 Rewards cardholder | Their credit card bill, showing the card points they would earn |
 
+In the prototype, each next bill has its own walk-through through the same six journey steps: electricity for S1 and S2, the metro card for S3, the credit card bill for S4.
+
 **S4 Rewards cardholder** is anyone whose behaviour shows they chase credit card rewards. It is not limited to Paytm co-branded cards. Paytm spots them from 3 signals:
 1. Bills paid by credit card even when UPI (Unified Payments Interface) is free.
 2. Number of credit cards saved on Paytm, or whose card bills they pay on Paytm.

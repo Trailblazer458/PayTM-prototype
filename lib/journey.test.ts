@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canOfferAutopay,
+  amountFor,
   effectiveVariant,
   pointsEarnedHere,
   pointsThisYear,
@@ -10,7 +11,8 @@ import {
   type Action,
   type JourneyState,
 } from "./journey";
-import { screen1Note, screens } from "./screens";
+import { metaFor, screen1Note, screens } from "./screens";
+import { billKindFor, cardBillProfile, metroProfile } from "./bills";
 
 const run = (actions: Action[], from: JourneyState = initialState) => actions.reduce(reducer, from);
 
@@ -337,5 +339,44 @@ describe("reset and storage", () => {
     expect(parseStored(JSON.stringify(s))).toEqual(s);
     expect(parseStored("not json")).toBeNull();
     expect(parseStored(null)).toBeNull();
+  });
+});
+
+describe("metro card (S3) and card bill (S4) journeys", () => {
+  it("each segment follows its own bill", () => {
+    expect(billKindFor("S1")).toBe("electricity");
+    expect(billKindFor("S2")).toBe("electricity");
+    expect(billKindFor("S3")).toBe("metro");
+    expect(billKindFor("S4")).toBe("cardbill");
+  });
+
+  it("an S4 saved card is added without typing a number", () => {
+    const s = run([{ type: "SET_SEGMENT", segment: "S4" }, { type: "GOTO", screen: 2 }, { type: "BILLER_ADDED", via: "saved_card" }]);
+    expect(s.screen).toBe(3);
+    expect(s.billerAdded).toBe(true);
+  });
+
+  it("the amount she picks is the amount paid, otherwise the bill's default", () => {
+    const s3 = run([
+      { type: "SET_SEGMENT", segment: "S3" },
+      { type: "GOTO", screen: 3 },
+      { type: "PAYMENT_STARTED", bill: "nov", amount: 500 },
+    ]);
+    expect(amountFor(s3, "nov")).toBe(500);
+    expect(amountFor(s3, "dec")).toBe(metroProfile.amounts.dec);
+    const s4 = reducer(initialState, { type: "SET_SEGMENT", segment: "S4" });
+    expect(amountFor(s4, "nov")).toBe(cardBillProfile.amounts.nov);
+  });
+
+  it("the presenter text names the metro card and the card bill on their screens", () => {
+    expect(metaFor(2, "metro").name).toContain("metro card");
+    expect(metaFor(2, "cardbill").name).toContain("saved card");
+    expect(metaFor(2, "electricity").name).toContain("consumer number");
+    expect(metaFor(4, "metro").barrier).toBe(metaFor(4).barrier);
+  });
+
+  it("card bills can't be paid with a credit card, metro top-ups can", () => {
+    expect(cardBillProfile.allowCard).toBe(false);
+    expect(metroProfile.allowCard).toBe(true);
   });
 });

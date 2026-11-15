@@ -41,7 +41,7 @@ A home screen (screen 0), then eight journey screens. Each screen lists what it 
 ### Screen 1. Recharge success with a bill suggestion (step 1)
 - Top: "₹349 recharge successful for Maa" with the usual success tick (S3: a small top-up on their own number).
 - **The first card under the success message is the bill suggestion**, not an offer. Copy idea: "Pay your home's electricity bill here too. Add it once and we'll remind you when it's due." Button: "Add electricity bill". A small line: "Covered by the Paytm Payment Guarantee."
-- **The next bill depends on the segment:** S1 electricity. S2 the bill they stopped paying, as a "welcome back" card with the guarantee up front. S3 a metro card recharge or an OTT (over-the-top streaming) subscription. S4 their credit card bill, showing the card points they would earn. Presenter line: "The next bill is chosen per segment. Electricity is one of several." The rest of the walk-through (screens 2 to 8) uses electricity as the worked example for every segment.
+- **The next bill depends on the segment:** S1 electricity. S2 the bill they stopped paying, as a "welcome back" card with the guarantee up front. S3 a metro card recharge or an OTT (over-the-top streaming) subscription. S4 their credit card bill, showing the card points they would earn. Presenter line: "The next bill is chosen per segment. Electricity is one of several." Each next bill has its own walk-through on screens 2 to 8 (see "Metro card and credit card bill journeys" below). S1 and S2 follow electricity.
 - S3 also sees the coupon streak tracker ("Month 1 of 2 done").
 - Below it, in this order: "Recharge another number" (not for S3, who has one number), then the existing offers (Postpaid credit, gift vouchers) moved down, then the full bill grid. No scratch cards. Only order and prominence change.
 - Solves **B2**: bills sit 4th to 5th after a payment today. Signal used: she recharges 2+ numbers.
@@ -110,6 +110,20 @@ A home screen (screen 0), then eight journey screens. Each screen lists what it 
   - E. Coupon streak (S3): recharge 2 months in a row and pick one coupon from Food, Fashion or Gaming. Streak tracker and coupon picker, generic merchant names and plain category icons, no real brand logos. Presenter note: coupons come from Paytm's existing gift voucher catalogue and are funded by merchants. Events `coupon_streak_progress`, `coupon_unlocked`, `coupon_redeemed`.
 - Metric: multi-category active users (the north star): paid 2+ recurring categories on Paytm in the last 60 days.
 
+## Metro card and credit card bill journeys (S3 and S4)
+
+S3 and S4 follow their own next bill through screens 2 to 8. The steps, barrier codes and metrics match the electricity journey. Only the bill changes. Layout follows today's Paytm screens, without their cashback, gold or coin banners. All names and numbers are fictional (operator "City Metro", fictional bank cards, last 4 digits only).
+
+| Screen | S3: metro card | S4: credit card bill |
+|---|---|---|
+| 2. Add | Metro chosen from her city. Card number field, "Where do I find it?" sheet with a drawn card back | Her saved cards listed, no number to type. "Find your other cards from your credit report" with consent |
+| 3. Pay | Top-up amount with +₹100, +₹200, +₹500, minimum ₹100 in multiples of ₹50. Add Value Machine (AVM) note. Guarantee. UPI or a saved card | Total due, minimum due or a custom amount, with an interest warning. Points this statement earned. Guarantee (or the Test 4 offer). Paid by UPI from the bank account |
+| 4. Live status | Paid, sent to City Metro, confirmed, ready to collect at any station | Paid, sent to Saffron Bank, confirmed, limit restored |
+| 5. Cue | WhatsApp reminder around when she usually tops up | WhatsApp reminder when the card bill is unpaid and due |
+| 6. Autopilot | Auto top-up with a monthly limit | AutoPay for the total due with a cap |
+| 7. Bills tab | Metro card, her prepaid number, a streaming plan paid outside Paytm | Her three card bills, one paid in the bank's app (outside Paytm), one due |
+| 8. Summary | Her own payments, plus the coupon streak | Her card bills, plus the card points tracker |
+
 ## Presenter layer (part of the core build)
 
 Judges will open this on a laptop, so the desktop view needs a way to tell the story.
@@ -137,7 +151,7 @@ Judges will open this on a laptop, so the desktop view needs a way to tell the s
 
 ## Out of scope
 
-LPG flow, bill scanning, SMS reading, a shared household view, DTH pushes, coins, scratch cards, lucky draws, segments S5 to S7 (S5 is now AutoPay recharger), full separate flows for the metro card and credit card bills (screens 2 to 8 use electricity as the example), any real payment, any real login, any backend.
+LPG flow, bill scanning, SMS reading, a shared household view, DTH pushes, coins, scratch cards, lucky draws, segments S5 to S7 (S5 is now AutoPay recharger), an OTT subscription journey (S3 follows the metro card), any real payment, any real login, any backend.
 
 ## Design
 
