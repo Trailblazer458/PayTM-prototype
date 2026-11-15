@@ -1,8 +1,11 @@
 import type { BillKey } from "./seed";
-import { board, findCard, savedCards } from "./seed";
+import { bills, board, findCard, pointsEarlierThisYear, savedCards } from "./seed";
 
+/** Journey screens 1 to 8. Screen 0 is the home screen that comes before them. */
 export const SCREEN_COUNT = 8;
-export type ScreenNo = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export const FIRST_SCREEN = 0;
+export type ScreenNo = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+export type CouponCategory = "food" | "fashion" | "gaming";
 
 export type PaymentStatus = "none" | "pending" | "confirmed" | "refunded";
 export type Segment = "S1" | "S2" | "S3" | "S4";
@@ -45,6 +48,8 @@ export interface JourneyState {
   /** setUpAfter: which payment she set it up after (1 = her own choice on screen 4, 2 = the screen 6 offer). */
   autopay: { status: "none" | "active" | "declined"; cap: number | null; setUpAfter?: 1 | 2 | null };
   airtel: "unset" | "remind" | "not_now";
+  /** S3 coupon streak: the coupon picked once the streak is complete. */
+  coupon: CouponCategory | null;
   events: MetricEvent[];
   nextEventId: number;
 }
@@ -68,6 +73,9 @@ export type Action =
   | { type: "AUTOPAY_DECLINED" }
   | { type: "AIRTEL_CHOICE"; value: "remind" | "not_now" }
   | { type: "LOG"; name: string; detail?: string }
+  /** Logs a view event only the first time in this journey (same name and detail). */
+  | { type: "LOG_ONCE"; name: string; detail?: string }
+  | { type: "COUPON_PICKED"; category: CouponCategory }
   | { type: "TOGGLE"; key: keyof Toggles }
   | { type: "SET_SEGMENT"; segment: Segment }
   | { type: "SET_REWARD_VARIANT"; variant: RewardVariant }
@@ -75,7 +83,7 @@ export type Action =
   | { type: "HYDRATE"; state: JourneyState };
 
 export const initialState: JourneyState = {
-  screen: 1,
+  screen: 0,
   segment: "S1",
   toggles: { failurePath: false, showEvents: false, paytmToday: false },
   rewardVariant: "guarantee",
@@ -86,6 +94,7 @@ export const initialState: JourneyState = {
   reminder: "unset",
   autopay: { status: "none", cap: null },
   airtel: "unset",
+  coupon: null,
   events: [],
   nextEventId: 1,
 };
@@ -105,7 +114,7 @@ export function canChooseAutopay(s: JourneyState): boolean {
 }
 
 export function clampScreen(n: number): ScreenNo {
-  const r = Math.min(SCREEN_COUNT, Math.max(1, Math.round(n)));
+  const r = Math.min(SCREEN_COUNT, Math.max(FIRST_SCREEN, Math.round(n)));
   return r as ScreenNo;
 }
 
@@ -132,6 +141,23 @@ function log(s: JourneyState, name: string, detail?: string): JourneyState {
   return { ...s, events: [...s.events, ev], nextEventId: s.nextEventId + 1 };
 }
 
+/** S4 card points tracker: points earned on bills paid here with a points card, confirmed in this journey. */
+export function pointsEarnedHere(s: JourneyState): number {
+  return (["nov", "dec"] as const).reduce((sum, b) => {
+    const card = findCard(s.payMethods[b]);
+    if (!card || card.kind !== "points" || s.payments[b] !== "confirmed") return sum;
+    return sum + Math.round(bills[b].amount * card.rate);
+  }, 0);
+}
+
+/** Points earned paying bills here this year, including before this journey. */
+export function pointsThisYear(s: JourneyState): number {
+  return pointsEarlierThisYear + pointsEarnedHere(s);
+}
+
+/** S4 signals: how Paytm spots a rewards cardholder. Logged as events, not success metrics. */
+export const S4_SIGNAL_EVENTS = ["bill_paid_by_card_when_upi_free", "credit_cards_saved", "card_rewards_page_time"];
+
 /** Test 4 runs on S2 and S4 users. Results are read separately for each segment. */
 export const TEST4_SEGMENTS: Segment[] = ["S2", "S4"];
 
@@ -149,14 +175,14 @@ function variantTag(s: JourneyState): string | undefined {
   return inTest4(s) ? `test 4 group: ${s.rewardVariant.replace("_", " ")}, segment ${s.segment}` : undefined;
 }
 
-/** Records how a bill is paid. Want stage signal: a credit card chosen although UPI is free. */
+/** Records how a bill is paid. S4 signal (how Paytm spots a rewards cardholder): a credit card chosen although UPI is free. */
 function choosePayMethod(s: JourneyState, bill: BillKey, method: PayMethod): JourneyState {
   const next = { ...s, payMethods: { ...s.payMethods, [bill]: method } };
   const card = findCard(method);
   return card ? log(next, "bill_paid_by_card_when_upi_free", `${bill} bill, ${card.name} ending ${card.last4}`) : next;
 }
 
-/** Want stage signal: logged once per journey when the S4 story starts. */
+/** S4 signal (how Paytm spots a rewards cardholder): logged once per journey when the S4 story starts. */
 function startS4(s: JourneyState): JourneyState {
   if (s.events.some((e) => e.name === "credit_cards_saved")) return s;
   return log(s, "credit_cards_saved", `${savedCards.length} cards`);
@@ -240,6 +266,14 @@ export function reducer(s: JourneyState, a: Action): JourneyState {
         { ...s, airtel: a.value },
         a.value === "remind" ? "moved_from_elsewhere_invite_accepted" : "moved_from_elsewhere_invite_dismissed",
       );
+
+    case "LOG_ONCE":
+      if (s.events.some((e) => e.name === a.name && e.detail === a.detail)) return s;
+      return log(s, a.name, a.detail);
+
+    case "COUPON_PICKED":
+      if (s.coupon) return s;
+      return log({ ...s, coupon: a.category }, "coupon_redeemed", a.category);
 
     case "LOG":
       return log(s, a.name, a.detail);

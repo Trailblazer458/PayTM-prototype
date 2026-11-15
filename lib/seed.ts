@@ -83,6 +83,56 @@ export function cardLabel(card: SavedCard): string {
   return `${card.name} •• ${card.last4}`;
 }
 
+/** S3 Solo young recharger: one number, small frequent top-ups. */
+export const soloRecharge = { amount: 199, number: "99XXX XX552", operator: "Jio", plan: "20 days, 1 GB a day" };
+
+/** S3 next bill: a metro card recharge. Fictional card number, generic city metro. */
+export const metroCard = { name: "Metro card", number: "•• 7710", balance: 40, topUp: 300 };
+
+/** S4 next bill: her credit card bill (on the lead card). */
+export const cardBill = { amount: 18450, due: "28 Nov" };
+
+/** S4 card points tracker: points already earned on bills paid here this year, before this journey. */
+export const pointsEarlierThisYear = 6380;
+
+/** Home "For you" offer card, by segment. Fictional terms. No real lender or insurer names. */
+export const homeOffers = {
+  S1: {
+    kind: "Insurance",
+    title: "Family health insurance",
+    body: "Cover your family of 4 for ₹5 lakh. Plans from ₹612 a month.",
+    cta: "See plans",
+  },
+  S2: {
+    kind: "Short-term credit",
+    title: "Pay bills now, pay back in 30 days",
+    body: "A short-term credit line for your bills, up to ₹5,000.",
+    cta: "Check limit",
+  },
+  S3: {
+    kind: "Paytm Postpaid",
+    title: "Spend now, pay next month",
+    body: "A credit line up to ₹10,000 for top-ups, food and games.",
+    cta: "Check limit",
+  },
+  S4: {
+    kind: "Insurance",
+    title: "Purchase protection for card spends",
+    body: "Cover what you buy on your credit cards. From ₹49 a year.",
+    cta: "See cover",
+  },
+} as const;
+
+export const homeOfferSmallPrint =
+  "Loans and credit by partner lenders, subject to eligibility. Insurance by partner insurers.";
+
+/** S3 coupon streak. Generic merchants, from the gift voucher catalogue, funded by merchants. */
+export const coupons = {
+  food: { label: "Food", merchant: "Tiffin Point", offer: "₹100 off orders above ₹299", code: "TIFFIN100" },
+  fashion: { label: "Fashion", merchant: "StyleKart", offer: "15% off, up to ₹250", code: "STYLE15" },
+  gaming: { label: "Gaming", merchant: "PlayZone", offer: "₹150 game credit", code: "PLAY150" },
+} as const;
+
 /** Test 4 offers. Paytm-funded, example amounts. */
 export const test4Offers = {
   cashback: "₹25 cashback on this bill",

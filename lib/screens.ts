@@ -15,6 +15,17 @@ export interface ScreenMeta {
 
 export const screens: ScreenMeta[] = [
   {
+    no: 0,
+    step: "Home",
+    name: "Home with a For you offer",
+    phase: "Discover",
+    barrier: "None directly. It pays for the bill-first order on screen 1",
+    change:
+      "Today a points or coins banner sits on the home screen. Here a For you card shows one credit or insurance offer chosen for the segment, above the UPI (Unified Payments Interface) Money Transfer section.",
+    metric: "Home offer tap rate, and revenue per user against a holdout",
+    note: "This card earns back some of the revenue lost when bills move above Postpaid and card offers after a payment. Tap Recharge again to start the journey.",
+  },
+  {
     no: 1,
     step: "Step 1",
     name: "Bill suggestion after a recharge",
@@ -120,9 +131,10 @@ export const segments = [
   },
   {
     id: "S3",
-    name: "AutoPay recharger",
-    why: "Already holds a recharge mandate. Offer AutoPay first, next to it.",
-    signal: "she already has an AutoPay mandate for a recharge on Paytm",
+    name: "Solo young recharger",
+    why: "One number, small frequent top-ups, no bills. Spends on food delivery or gaming through Paytm UPI. Next bill: a metro card. Reward: a coupon streak.",
+    signal:
+      "they recharge one number with small, frequent top-ups, pay no bills, and spend on food delivery or gaming through Paytm UPI (Unified Payments Interface)",
   },
   {
     id: "S4",
@@ -133,12 +145,30 @@ export const segments = [
   },
 ] as const;
 
-/** Screen 1 presenter note. The signal changes with the segment, the trade-off does not. */
+export const NEXT_BILL_LINE = "The next bill is chosen per segment. Electricity is one of several.";
+
+const nextBill: Record<string, string> = {
+  S1: "electricity",
+  S2: "the bill they stopped paying, with the guarantee up front",
+  S3: "a metro card recharge (or an OTT, over-the-top streaming, subscription)",
+  S4: "their credit card bill, with the card points they would earn",
+};
+
+/** Screen 1 presenter note. The signal and next bill change with the segment, the trade-off does not. */
 export function screen1Note(segment: string): string {
   const seg = segments.find((s) => s.id === segment) ?? segments[0];
-  return `Signal used (${seg.id}): ${seg.signal}. Trade-off: this pushes down offers that earn Paytm more.`;
+  return `Signal used (${seg.id}): ${seg.signal}. Next bill for ${seg.id}: ${nextBill[seg.id]}. Trade-off: this pushes down offers that earn Paytm more.`;
+}
+
+/** Screen 8 presenter note: which reward this segment gets. No coins, scratch cards or lucky draws. */
+export function screen8RewardNote(segment: string): string {
+  if (segment === "S3")
+    return "Reward for S3: a coupon streak. Recharge 2 months in a row and pick one coupon. Coupons come from Paytm's existing gift voucher catalogue and are funded by merchants.";
+  if (segment === "S4")
+    return "Reward for S4: a card points tracker. Points are shown at payment and added up for the year here.";
+  return `Reward for ${segment}: a progress meter, 3 of 4 home bills sorted. No coins, no scratch cards, no lucky draws.`;
 }
 
 export function metaFor(no: number): ScreenMeta {
-  return screens[no - 1] ?? screens[0];
+  return screens.find((m) => m.no === no) ?? screens[0];
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   canOfferAutopay,
   effectiveVariant,
+  pointsEarnedHere,
+  pointsThisYear,
   initialState,
   parseStored,
   reducer,
@@ -13,20 +15,20 @@ import { screen1Note, screens } from "./screens";
 const run = (actions: Action[], from: JourneyState = initialState) => actions.reduce(reducer, from);
 
 describe("screen order", () => {
-  it("has 8 screens numbered 1 to 8", () => {
-    expect(screens.map((s) => s.no)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+  it("has a home screen 0, then 8 screens numbered 1 to 8", () => {
+    expect(screens.map((s) => s.no)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
   });
 
-  it("Next walks 1 to 8 and stops at 8, Back stops at 1", () => {
+  it("starts on home, Next walks to 8 and stops, Back stops at home", () => {
     const seen: number[] = [];
     let s = initialState;
     for (let i = 0; i < 10; i++) {
       seen.push(s.screen);
       s = reducer(s, { type: "NEXT" });
     }
-    expect(seen).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 8, 8]);
+    expect(seen).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 8]);
     for (let i = 0; i < 10; i++) s = reducer(s, { type: "BACK" });
-    expect(s.screen).toBe(1);
+    expect(s.screen).toBe(0);
   });
 
   it("the tap journey moves through the screens in order", () => {
@@ -161,7 +163,7 @@ describe("failure path", () => {
   });
 });
 
-describe("Want stage events", () => {
+describe("S4 signals: how Paytm spots a rewards cardholder", () => {
   it("paying with a saved credit card logs bill_paid_by_card_when_upi_free", () => {
     const s = run([{ type: "GOTO", screen: 3 }, { type: "PAYMENT_STARTED", bill: "nov", method: "saffron" }]);
     expect(s.payMethods.nov).toBe("saffron");
@@ -265,8 +267,50 @@ describe("screen 1 note follows the segment", () => {
     expect(screen1Note("S1")).toContain("recharges 2 or more numbers");
     expect(screen1Note("S2")).toContain("60 or more days");
     expect(screen1Note("S2")).not.toContain("recharges 2 or more numbers");
-    expect(screen1Note("S3")).toContain("AutoPay mandate");
+    expect(screen1Note("S3")).toContain("one number");
+    expect(screen1Note("S3")).toContain("metro card");
+    expect(screen1Note("S4")).toContain("credit card bill");
     expect(screen1Note("S4")).toContain("by credit card even when UPI");
+  });
+});
+
+describe("home offer and reward events", () => {
+  it("LOG_ONCE logs a view only once per journey", () => {
+    const s = run([
+      { type: "LOG_ONCE", name: "home_offer_viewed", detail: "S1, insurance" },
+      { type: "LOG_ONCE", name: "home_offer_viewed", detail: "S1, insurance" },
+      { type: "LOG_ONCE", name: "home_offer_viewed", detail: "S3, paytm postpaid" },
+    ]);
+    expect(s.events.map((e) => e.detail)).toEqual(["S1, insurance", "S3, paytm postpaid"]);
+  });
+
+  it("a home screen view is logged on screen 0", () => {
+    const s = reducer(initialState, { type: "LOG_ONCE", name: "home_offer_viewed", detail: "S1, insurance" });
+    expect(s.events[0].screen).toBe(0);
+  });
+
+  it("picking a coupon redeems it once, with its category", () => {
+    const s = run([
+      { type: "COUPON_PICKED", category: "gaming" },
+      { type: "COUPON_PICKED", category: "food" },
+    ]);
+    expect(s.coupon).toBe("gaming");
+    expect(s.events.filter((e) => e.name === "coupon_redeemed").map((e) => e.detail)).toEqual(["gaming"]);
+  });
+
+  it("the points tracker adds confirmed points-card payments to this year's total", () => {
+    const s = run([
+      { type: "GOTO", screen: 3 },
+      { type: "PAYMENT_STARTED", bill: "nov", method: "saffron" },
+      { type: "PAYMENT_CONFIRMED", bill: "nov" },
+    ]);
+    expect(pointsEarnedHere(s)).toBe(1170);
+    expect(pointsThisYear(s)).toBe(6380 + 1170);
+  });
+
+  it("cashback cards and unconfirmed payments do not add points", () => {
+    const s = run([{ type: "GOTO", screen: 3 }, { type: "PAYMENT_STARTED", bill: "nov", method: "tarang" }]);
+    expect(pointsEarnedHere(s)).toBe(0);
   });
 });
 
@@ -283,7 +327,7 @@ describe("reset and storage", () => {
       { type: "GOTO", screen: 5 },
       { type: "RESET", keepToggles: true },
     ]);
-    expect(s.screen).toBe(1);
+    expect(s.screen).toBe(0);
     expect(s.toggles.failurePath).toBe(true);
     expect(s.rewardVariant).toBe("cashback");
   });

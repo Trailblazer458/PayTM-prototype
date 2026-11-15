@@ -18,28 +18,47 @@ import {
   Wallet,
   Zap,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { TrainFront } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import { effectiveVariant, type RewardVariant } from "@/lib/journey";
 import { rupees } from "@/lib/format";
-import { bills, board, cardReward, leadCard, otherBills, persona, recharge, savedCards, test4Offers } from "@/lib/seed";
+import {
+  bills,
+  board,
+  cardBill,
+  cardReward,
+  leadCard,
+  metroCard,
+  otherBills,
+  persona,
+  recharge,
+  savedCards,
+  soloRecharge,
+  test4Offers,
+} from "@/lib/seed";
 import { PaytmToday } from "./PaytmToday";
 import { AppHeader, BottomSheet, Button, Wordmark } from "@/components/ui/kit";
 
 const NOT_IN_DEMO = "Not part of this demo";
 
 export function SuccessHeader() {
-  const { showToast } = useJourney();
+  const { state, showToast } = useJourney();
+  const solo = state.segment === "S3";
   return (
     <div className="px-5 pb-5 pt-6 text-center">
       <div className="anim-pop mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-ok text-white shadow-[0_8px_24px_-6px_rgba(18,161,80,0.6)]">
         <Check size={36} strokeWidth={3} />
       </div>
       <h1 className="mt-3 text-[20px] font-bold leading-tight">
-        {rupees(recharge.amount)} recharge successful for {recharge.forName}
+        {solo
+          ? `${rupees(soloRecharge.amount)} recharge successful`
+          : `${rupees(recharge.amount)} recharge successful for ${recharge.forName}`}
       </h1>
       <p className="mt-1 text-[13px] text-muted">
-        {recharge.operator} prepaid {recharge.number}. {recharge.plan}.
+        {solo
+          ? `${soloRecharge.operator} prepaid ${soloRecharge.number}. ${soloRecharge.plan}.`
+          : `${recharge.operator} prepaid ${recharge.number}. ${recharge.plan}.`}
       </p>
       <div className="mt-3 flex justify-center gap-2">
         <Button variant="ghost" full={false} className="!py-1.5 !text-[13px]" onClick={() => showToast(NOT_IN_DEMO)}>
@@ -53,7 +72,7 @@ export function SuccessHeader() {
   );
 }
 
-/** S4: the simple card rewards sheet. The seconds spent on it are a Want stage signal. */
+/** S4: the simple card rewards sheet. The seconds spent on it are an S4 signal (how Paytm spots a rewards cardholder). */
 function CardRewardsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const amount = bills.nov.amount;
   return (
@@ -130,16 +149,16 @@ export function BillSuggestionCard() {
       cta: "Pay electricity bill",
     },
     S3: {
-      Icon: Repeat,
-      title: "Put electricity on AutoPay too",
-      body: "You already use AutoPay for your mobile recharge. Add electricity next to it. You set the limit and get a message before each debit.",
-      cta: "Add electricity bill",
+      Icon: TrainFront,
+      title: "Top up your metro card here too",
+      body: `Your ${metroCard.name} ${metroCard.number} has ${rupees(metroCard.balance)} left. Top up ${rupees(metroCard.topUp)} in 2 taps and we'll remind you when it runs low.`,
+      cta: "Top up metro card",
     },
     S4: {
       Icon: CreditCard,
-      title: `Earn ${cardReward(leadCard, bills.nov.amount)} on your electricity bill`,
-      body: `Pay it with your saved ${leadCard.name} •• ${leadCard.last4}. That is ${cardReward(leadCard, bills.nov.amount)} on a ${rupees(bills.nov.amount)} bill.`,
-      cta: "Add electricity bill",
+      title: "Pay your credit card bill here",
+      body: `${leadCard.name} •• ${leadCard.last4}: ${rupees(cardBill.amount)} due on ${cardBill.due}. Bills you pay here with this card earn points, like ${cardReward(leadCard, bills.nov.amount)} on a ${rupees(bills.nov.amount)} electricity bill.`,
+      cta: "Pay card bill",
     },
   }[seg];
   const { Icon } = copy;
@@ -154,11 +173,14 @@ export function BillSuggestionCard() {
         : null;
   const bannerIsGuarantee = seg === "S2" && s2.guarantee;
 
-  const onTap = () => {
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const go = () => {
     // A lapsed payer already has the bill saved, so the number is filled in.
     if (seg === "S2") dispatch({ type: "SET_CONSUMER_NUMBER", value: board.consumerNumber.replace(/\D/g, "") });
     dispatch({ type: "SUGGESTION_TAPPED" });
   };
+  // S3 and S4 suggest a different bill. The rest of the demo uses electricity as the worked example.
+  const onTap = () => (seg === "S3" || seg === "S4" ? setHandoffOpen(true) : go());
 
   const openRewards = () => {
     openedAt.current = Date.now();
@@ -208,6 +230,45 @@ export function BillSuggestionCard() {
         </div>
       ) : null}
       <CardRewardsSheet open={rewardsOpen} onClose={closeRewards} />
+      <BottomSheet open={handoffOpen} onClose={() => setHandoffOpen(false)} title="This demo continues with electricity">
+        <p className="text-[14px] leading-snug">
+          {seg === "S3"
+            ? "The next bill is chosen per segment. For you it is the metro card. To keep the demo short, the next steps use the electricity bill as the example. The same steps work for a metro card."
+            : "The next bill is chosen per segment. For you it is the credit card bill. To keep the demo short, the next steps use the electricity bill as the example, paid with your card."}
+        </p>
+        <Button
+          className="mt-4"
+          onClick={() => {
+            setHandoffOpen(false);
+            go();
+          }}
+        >
+          Continue with electricity
+        </Button>
+      </BottomSheet>
+    </section>
+  );
+}
+
+/** S3 reward: recharge 2 months in a row, then pick one coupon. Month 1 is done now. */
+function CouponStreak() {
+  const { dispatch } = useJourney();
+  useEffect(() => {
+    dispatch({ type: "LOG_ONCE", name: "coupon_streak_progress", detail: "month 1 of 2" });
+  }, [dispatch]);
+  return (
+    <section className="anim-rise rounded-2xl bg-card p-4" aria-label="Coupon streak">
+      <div className="flex items-center justify-between">
+        <h2 className="text-[15px] font-semibold">Coupon streak</h2>
+        <span className="rounded-full bg-white px-2.5 py-0.5 text-[12px] font-semibold text-sky-dark">Month 1 of 2 done</span>
+      </div>
+      <div className="mt-3 flex gap-2" aria-hidden>
+        <span className="h-2 flex-1 rounded-full bg-sky" />
+        <span className="h-2 flex-1 rounded-full bg-line" />
+      </div>
+      <p className="mt-2.5 text-[13px] leading-snug text-muted">
+        Recharge again next month and pick one coupon from Food, Fashion or Gaming.
+      </p>
     </section>
   );
 }
@@ -263,8 +324,8 @@ function Offers() {
           className="rounded-2xl bg-card p-3 text-left hover:bg-line"
         >
           <Gift size={20} className="text-warn" />
-          <div className="mt-2 text-[13px] font-semibold leading-snug">You won a scratch card</div>
-          <div className="mt-1 text-[11px] text-muted">Tap to scratch</div>
+          <div className="mt-2 text-[13px] font-semibold leading-snug">Gift vouchers</div>
+          <div className="mt-1 text-[11px] text-muted">Food, fashion and more</div>
         </button>
       </div>
     </section>
@@ -319,7 +380,7 @@ export function S1RechargeSuccess() {
       <SuccessHeader />
       <div className="space-y-4 px-4 pb-8">
         <BillSuggestionCard />
-        <RechargeAnother />
+        {state.segment === "S3" ? <CouponStreak /> : <RechargeAnother />}
         <Offers />
         <BillGrid />
         <button

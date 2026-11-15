@@ -7,6 +7,7 @@ import type { JourneyState } from "@/lib/journey";
 import { rupees } from "@/lib/format";
 import { bills, board, otherBills, summaryMonth } from "@/lib/seed";
 import { AppHeader, Button, Wordmark } from "@/components/ui/kit";
+import { SegmentReward } from "@/components/ui/SegmentReward";
 
 /** The push preview. Never shows amounts. */
 export function previewText(s: JourneyState): string {
@@ -86,6 +87,8 @@ export function S8MonthlySummary() {
           <div className="text-[22px] font-bold">{summaryMonth} sorted</div>
           <div className="text-[14px]">3 bills paid on time on Paytm.</div>
         </div>
+
+        <SegmentReward />
 
         <Section title="Paid on Paytm">
           <Item icon={ok} label={`${board.short} electricity`} right={`${rupees(bills.dec.amount)}, on time`} />

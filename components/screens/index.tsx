@@ -1,6 +1,7 @@
 "use client";
 
 import type { ScreenNo } from "@/lib/journey";
+import { S0Home } from "./S0Home";
 import { S1RechargeSuccess } from "./S1RechargeSuccess";
 import { S2AddBill } from "./S2AddBill";
 import { S3BillFetched } from "./S3BillFetched";
@@ -12,6 +13,8 @@ import { S8MonthlySummary } from "./S8MonthlySummary";
 
 export function ScreenView({ screen }: { screen: ScreenNo }) {
   switch (screen) {
+    case 0:
+      return <S0Home />;
     case 1:
       return <S1RechargeSuccess />;
     case 2:

@@ -24,14 +24,26 @@ Most Paytm users pay one recurring category on Paytm, usually a mobile recharge.
 - The recharge that opens the journey: ₹349 for Maa (98XXX XX421).
 - Use these exact values everywhere so the story stays consistent.
 
-## The eight screens (core scope, build these first)
+## The screens (core scope, build these first)
 
-Each screen lists what it shows, the barrier it solves (barrier codes match the deck) and the metric it moves.
+A home screen (screen 0), then eight journey screens. Each screen lists what it shows, the barrier it solves (barrier codes match the deck) and the metric it moves.
+
+### Screen 0. Home with a "For you" offer (before step 1)
+- A simple Paytm-style home: header, then a **"For you" offer card above the UPI Money Transfer section**, then the Recharge & Bills grid. A "Recharge again" shortcut starts the journey (screen 1).
+- The offer card replaces today's points or coins banner. It changes by segment:
+  - S1: family health insurance.
+  - S3: Paytm Postpaid credit line ("Spend now, pay next month") or an education loan.
+  - S2 and S4: a short-term credit or insurance offer.
+- Small print: "Loans and credit by partner lenders, subject to eligibility. Insurance by partner insurers." No real lender or insurer names or logos.
+- Presenter note: this card earns back some of the revenue lost when bills move above Postpaid and card offers after a payment.
+- Metric: home offer tap rate. Events: `home_offer_viewed`, `home_offer_tapped`.
 
 ### Screen 1. Recharge success with a bill suggestion (step 1)
-- Top: "₹349 recharge successful for Maa" with the usual success tick.
+- Top: "₹349 recharge successful for Maa" with the usual success tick (S3: a small top-up on their own number).
 - **The first card under the success message is the bill suggestion**, not an offer. Copy idea: "Pay your home's electricity bill here too. Add it once and we'll remind you when it's due." Button: "Add electricity bill". A small line: "Covered by the Paytm Payment Guarantee."
-- Below it, in this order: "Recharge another number", then the existing offers (Postpaid credit, scratch card) moved down, then the full bill grid. Nothing is removed. Only order and prominence change.
+- **The next bill depends on the segment:** S1 electricity. S2 the bill they stopped paying, as a "welcome back" card with the guarantee up front. S3 a metro card recharge or an OTT (over-the-top streaming) subscription. S4 their credit card bill, showing the card points they would earn. Presenter line: "The next bill is chosen per segment. Electricity is one of several." The rest of the walk-through (screens 2 to 8) uses electricity as the worked example for every segment.
+- S3 also sees the coupon streak tracker ("Month 1 of 2 done").
+- Below it, in this order: "Recharge another number" (not for S3, who has one number), then the existing offers (Postpaid credit, gift vouchers) moved down, then the full bill grid. No scratch cards. Only order and prominence change.
 - Solves **B2**: bills sit 4th to 5th after a payment today. Signal used: she recharges 2+ numbers.
 - Metric: bill suggestion tap rate after a recharge.
 
@@ -92,6 +104,10 @@ Each screen lists what it shows, the barrier it solves (barrier codes match the 
 ### Screen 8. Monthly summary (step 6)
 - Opens from a push notification preview. **Notification previews never show amounts.** Preview text: "November sorted: 3 bills paid on time. 1 more could be on autopilot."
 - The summary: paid on Paytm (with an on-time tick), on autopilot, paid outside Paytm, and pending. One clear next action: "Put Airtel postpaid on autopilot" (only if it has been paid on Paytm twice, otherwise "Remind me next month").
+- **Reward by segment** (no coins, no scratch cards, no lucky draws):
+  - A. Progress meter (S1, S2): "3 of 4 home bills sorted". Event `progress_meter_viewed`.
+  - D. Card points tracker (S4): points shown at payment, plus "You earned X points paying bills here this year". Event `points_tracker_viewed`.
+  - E. Coupon streak (S3): recharge 2 months in a row and pick one coupon from Food, Fashion or Gaming. Streak tracker and coupon picker, generic merchant names and plain category icons, no real brand logos. Presenter note: coupons come from Paytm's existing gift voucher catalogue and are funded by merchants. Events `coupon_streak_progress`, `coupon_unlocked`, `coupon_redeemed`.
 - Metric: multi-category active users (the north star): paid 2+ recurring categories on Paytm in the last 60 days.
 
 ## Presenter layer (part of the core build)
@@ -99,28 +115,29 @@ Each screen lists what it shows, the barrier it solves (barrier codes match the 
 Judges will open this on a laptop, so the desktop view needs a way to tell the story.
 
 - **Layout:** on desktop, the phone sits in the centre (about 390 × 844) with a presenter panel on the right. Under 768px, show only the phone, full screen, with a small "i" button that opens the panel as a sheet.
-- **Presenter panel, per screen:** step number and name, "Screen N of 8", the barrier it solves (for example "B2: Bills sit 4th to 5th after a payment"), what changed from Paytm today in one line, and the metric it moves.
-- **Navigation:** Back and Next buttons, arrow keys, and a row of 8 dots. Tapping inside the phone must also move the story forward naturally.
+- **Presenter panel, per screen:** step number and name, "Home" or "Screen N of 8", the barrier it solves (for example "B2: Bills sit 4th to 5th after a payment"), what changed from Paytm today in one line, and the metric it moves.
+- **Navigation:** Back and Next buttons, arrow keys, and a row of 9 dots (home plus 8 screens). Tapping inside the phone must also move the story forward naturally.
 - **Scenarios:** failure path toggle on screen 4, the Test 4 picker (guarantee only, cashback, card rewards, nothing), and Reset journey.
 - **Metric events (toggle, off by default):** a small log that shows events as they fire, for example `bill_suggestion_tapped`, `biller_added`, `first_payment_confirmed`, `reminder_payment_started`, `autopay_set_up`, `moved_from_elsewhere`. This shows how each screen would be measured.
-- **Want stage metrics** (the S4 signals), also in the log:
+- **S4 signals: how Paytm spots a rewards cardholder.** Not success metrics. They are also in the log, marked as S4 signals:
   - `bill_paid_by_card_when_upi_free`: fires when the user pays with a saved credit card instead of UPI on screen 3 or on the quick-pay screen.
   - `credit_cards_saved`: fires once with a count when the S4 journey starts. She has 3 fictional saved cards.
   - `card_rewards_page_time`: the S4 version of screen 1 has a small "See card rewards" link that opens a simple rewards sheet. The seconds spent on it are logged when the sheet closes.
+- **Home offer and reward events,** also in the log: `home_offer_viewed`, `home_offer_tapped`, `progress_meter_viewed`, `points_tracker_viewed`, `coupon_streak_progress`, `coupon_unlocked`, `coupon_redeemed`.
 - **Footer:** "Concept prototype for a case study. Simulated data. Not a live Paytm product."
 
 ## Nice to have, after the core works
 
-- **Segment switcher** in the presenter panel. It changes screen 1 only:
+- **Segment switcher** in the presenter panel: S1 Household manager, S2 Lapsed bill payer, S3 Solo young recharger, S4 Rewards cardholder. It changes the home offer (screen 0), the next bill on screen 1 and the reward in the summary (screen 8):
   - S1 Household manager: the default above.
   - S2 Lapsed bill payer: a "Welcome back" card naming the bill she used to pay, with the guarantee up front.
-  - S3 AutoPay recharger: offer AutoPay first, for a category next to the mandate she already holds.
-  - S4 Rewards cardholder: anyone whose behaviour shows they chase credit card rewards, not only Paytm co-brand cardholders. Spotted from 3 signals: bills paid by credit card even when UPI is free, the number of credit cards saved on Paytm (or whose bills they pay here), and time spent on Paytm's card rewards page. Screen 1 shows the reward her saved credit card would earn on this electricity bill as the reason to pay here, with a "See card rewards" link. Use a fictional bank card name.
+  - S3 Solo young recharger: one number, small frequent top-ups, no bills, spends on food delivery or gaming through Paytm UPI. Next bill: a metro card recharge (or an OTT subscription). Coupon streak reward. Replaces "AutoPay recharger", which drops to S5 and is out of scope.
+  - S4 Rewards cardholder: anyone whose behaviour shows they chase credit card rewards, not only Paytm co-brand cardholders. Spotted from 3 signals: bills paid by credit card even when UPI is free, the number of credit cards saved on Paytm (or whose bills they pay here), and time spent on Paytm's card rewards page. Screen 1 suggests her credit card bill and shows the points her saved card earns on bills paid here, with a "See card rewards" link. Use a fictional bank card name.
 - **"Paytm today" comparison:** a toggle on screen 1 that shows the current order (Postpaid pop-up, rating request, scratch card, then the grid) recreated as a simple mock. Do not use the screenshots in `reference/` inside the app (see below).
 
 ## Out of scope
 
-LPG flow, bill scanning, SMS reading, a shared household view, DTH and OTT pushes, coins, segments S5 to S7, any real payment, any real login, any backend.
+LPG flow, bill scanning, SMS reading, a shared household view, DTH pushes, coins, scratch cards, lucky draws, segments S5 to S7 (S5 is now AutoPay recharger), full separate flows for the metro card and credit card bills (screens 2 to 8 use electricity as the example), any real payment, any real login, any backend.
 
 ## Design
 
@@ -144,8 +161,8 @@ LPG flow, bill scanning, SMS reading, a shared household view, DTH and OTT pushe
 
 ## Definition of done
 
-- All 8 screens can be walked end to end on a phone and on a laptop, by tapping or with the presenter's Next button.
-- The failure path toggle and the Test 4 picker work, and Reset returns to screen 1.
+- The home screen and all 8 screens can be walked end to end on a phone and on a laptop, by tapping or with the presenter's Next button.
+- The failure path toggle and the Test 4 picker work, and Reset returns to the home screen.
 - The presenter panel shows the barrier, the change and the metric for every screen, and they match `CASE_CONTEXT.md`.
 - Build and tests pass, and a Vercel URL is live.
 - Nothing from `reference/` is in the repository or the deployed site.

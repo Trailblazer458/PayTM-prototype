@@ -6,7 +6,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import { rupees } from "@/lib/format";
 import { bills, board, cardReward, decemberReminderDate, findCard } from "@/lib/seed";
-import type { PayMethod } from "@/lib/journey";
+import { pointsThisYear, type PayMethod } from "@/lib/journey";
 import { PayMethodPicker } from "@/components/ui/PayMethodPicker";
 import { RewardsPopup } from "@/components/ui/RewardsPopup";
 import { AppHeader, Button, Wordmark } from "@/components/ui/kit";
@@ -139,7 +139,11 @@ function QuickSuccess({ onContinue, instant }: { onContinue: () => void; instant
           Continue
         </Button>
       </div>
-      {showReward && card ? <RewardsPopup card={card} amount={bill.amount} onClose={() => setShowReward(false)} /> : null}
+      {showReward && card ? <RewardsPopup
+          card={card}
+          amount={bill.amount}
+          yearTotal={state.segment === "S4" ? pointsThisYear(state) : undefined}
+          onClose={() => setShowReward(false)} /> : null}
     </div>
   );
 }

@@ -33,15 +33,44 @@ Target household managers who already recharge on Paytm. Make Paytm own the cue 
 | Repeat | B11 | Too many reminders get muted | Design around |
 
 ## Segments
-Chosen: S1 Household manager (primary, recharges 2+ numbers), S2 Lapsed bill payer (test cohort, a bill stopped for 60+ days), S3 AutoPay recharger (AutoPay first), S4 Rewards cardholder (include).
+Chosen: S1 Household manager (primary, recharges 2+ numbers), S2 Lapsed bill payer (test cohort, a bill stopped for 60+ days), S3 Solo young recharger (one number, small frequent top-ups, no bills, spends on food delivery or gaming through Paytm UPI), S4 Rewards cardholder (include).
+
+**The next bill is chosen per segment. Electricity is one of several.**
+| Segment | Next bill suggested after a recharge |
+|---|---|
+| S1 Household manager | Electricity |
+| S2 Lapsed bill payer | The bill they stopped paying, as a "welcome back" card with the guarantee up front |
+| S3 Solo young recharger | Metro card recharge or an OTT (over-the-top streaming) subscription |
+| S4 Rewards cardholder | Their credit card bill, showing the card points they would earn |
 
 **S4 Rewards cardholder** is anyone whose behaviour shows they chase credit card rewards. It is not limited to Paytm co-branded cards. Paytm spots them from 3 signals:
 1. Bills paid by credit card even when UPI (Unified Payments Interface) is free.
 2. Number of credit cards saved on Paytm, or whose card bills they pay on Paytm.
 3. Time spent on Paytm's card rewards page.
 
+**S4 signals: how Paytm spots a rewards cardholder.** These are not success metrics. They are logged as events so Paytm can find S4 users:
+- `bill_paid_by_card_when_upi_free`: a bill paid with a saved credit card instead of UPI.
+- `credit_cards_saved`: how many credit cards she has saved on Paytm.
+- `card_rewards_page_time`: seconds spent on the card rewards page.
+
 The reason to pay here is the reward her own saved card earns on the bill.
-Not now: S5 Solo young recharger (later), S6 Tenant or migrant (out), S7 Bills but no recharge (phase 2).
+Not now: S5 AutoPay recharger (out of scope, replaced as S3 by Solo young recharger), S6 Tenant or migrant (out), S7 Bills but no recharge (phase 2).
+
+## Home screen "For you" offer
+A "For you" offer card sits on the Paytm home screen above the UPI Money Transfer section. It replaces today's points or coins banner, and changes by segment:
+- S1: family health insurance.
+- S3: Paytm Postpaid credit line ("Spend now, pay next month") or an education loan.
+- S2 and S4: a short-term credit or insurance offer.
+
+Small print: "Loans and credit by partner lenders, subject to eligibility. Insurance by partner insurers." No real lender or insurer names or logos.
+
+Why: putting the bill suggestion first after a payment pushes down Postpaid and card offers that earn Paytm more. This card earns back some of that revenue.
+
+## Rewards by segment
+No coins, no scratch cards, no lucky draws.
+- **A. Progress meter (S1, S2):** "3 of 4 home bills sorted" in the monthly summary.
+- **D. Card points tracker (S4):** points shown at payment, plus "You earned X points paying bills here this year" in the summary.
+- **E. Coupon streak (S3):** recharge 2 months in a row and pick one coupon from Food, Fashion or Gaming. A streak tracker shows "Month 1 of 2 done". Coupons come from Paytm's existing gift voucher catalogue and are funded by merchants.
 
 ## The MVP journey and prototype screens
 | Step | What | Solves | Prototype screens | Measure |
@@ -64,10 +93,7 @@ Phases: Discover (steps 1 and 2), Trust (step 3), Habit (steps 4 to 6).
 - **North star:** multi-category active users, paid 2+ recurring categories on Paytm in the last 60 days, read against a holdout. Watched alongside: paid a second category in 2 of the last 3 cycles.
 - **Supporting:** reminder-started bill payments, bill suggestion tap rate, consumer numbers added per tap, first payment in 7 days confirmed first time, AutoPay after the 2nd payment, bills paid elsewhere that move to Paytm.
 - **Guardrails:** opt-out, mute and uninstall rates. Recharge frequency must not fall. Failed, pending, complaint and double-payment rates.
-- **Want stage (the S4 signals, measured as events):**
-  - `bill_paid_by_card_when_upi_free`: a bill paid with a saved credit card instead of UPI.
-  - `credit_cards_saved`: how many credit cards she has saved on Paytm.
-  - `card_rewards_page_time`: seconds spent on the card rewards page.
+- **Home offer and rewards events:** `home_offer_viewed`, `home_offer_tapped`, `progress_meter_viewed`, `points_tracker_viewed`, `coupon_streak_progress`, `coupon_unlocked`, `coupon_redeemed`.
 
 ## Test 4: Guarantee vs rewards
 S2 and S4 users are split into four groups: guarantee, cashback, card rewards or nothing. Results are read separately for each segment. Card rewards matter most to S4, so leaving them out would miss the group most likely to respond.

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useJourney } from "@/hooks/useJourney";
 import { rupees } from "@/lib/format";
 import { bills, board, cardReward, findCard, refundDeadline, test4Offers } from "@/lib/seed";
-import { effectiveVariant } from "@/lib/journey";
+import { effectiveVariant, pointsThisYear } from "@/lib/journey";
 import { RewardsPopup } from "@/components/ui/RewardsPopup";
 import { AutoPaySetup } from "@/components/ui/AutoPaySetup";
 import { AppHeader, Button } from "@/components/ui/kit";
@@ -221,7 +221,12 @@ export function S4LiveStatus() {
       ) : null}
 
       {showReward && card ? (
-        <RewardsPopup card={card} amount={amount} bonus={bonus} onClose={() => setShowReward(false)} />
+        <RewardsPopup
+          card={card}
+          amount={amount}
+          bonus={bonus}
+          yearTotal={state.segment === "S4" ? pointsThisYear(state) : undefined}
+          onClose={() => setShowReward(false)} />
       ) : null}
 
       <DemoPinSheet

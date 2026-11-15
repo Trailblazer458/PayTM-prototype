@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight, RotateCcw, Target, TrendingUp, Wrench } from "lucide-react";
 import { useJourney } from "@/hooks/useJourney";
-import { rewardVariants, SCREEN_COUNT, TEST4_SEGMENTS, type Toggles } from "@/lib/journey";
-import { metaFor, screen1Note, screens, segments } from "@/lib/screens";
+import { FIRST_SCREEN, rewardVariants, S4_SIGNAL_EVENTS, SCREEN_COUNT, TEST4_SEGMENTS, type Toggles } from "@/lib/journey";
+import { metaFor, NEXT_BILL_LINE, screen1Note, screen8RewardNote, screens, segments } from "@/lib/screens";
 import { Wordmark } from "@/components/ui/kit";
 
 export const DISCLAIMER = "Concept prototype for a case study. Simulated data. Not a live Paytm product.";
@@ -157,7 +157,7 @@ export function StepNav({
         <button
           type="button"
           onClick={() => dispatch({ type: "BACK" })}
-          disabled={state.screen === 1}
+          disabled={state.screen === FIRST_SCREEN}
           className="flex items-center gap-1 rounded-xl border border-line bg-white px-3 py-2 text-[14px] font-semibold disabled:opacity-40"
         >
           <ChevronLeft size={18} /> Back
@@ -169,8 +169,8 @@ export function StepNav({
               type="button"
               role="tab"
               aria-selected={state.screen === s.no}
-              aria-label={`Screen ${s.no}: ${s.name}`}
-              title={`${s.no}. ${s.name}`}
+              aria-label={s.no === 0 ? `Home: ${s.name}` : `Screen ${s.no}: ${s.name}`}
+              title={s.no === 0 ? `Home. ${s.name}` : `${s.no}. ${s.name}`}
               onClick={() => dispatch({ type: "GOTO", screen: s.no })}
               className={`h-2.5 rounded-full transition-all ${
                 state.screen === s.no ? "w-6 bg-sky" : s.no < state.screen ? "w-2.5 bg-navy/60" : "w-2.5 bg-[#c8d1df]"
@@ -195,7 +195,12 @@ export function StepNav({
 export function PresenterPanel() {
   const { state, dispatch } = useJourney();
   const m = metaFor(state.screen);
-  const note = state.screen === 1 ? screen1Note(state.segment) : m.note;
+  const note =
+    state.screen === 1
+      ? screen1Note(state.segment)
+      : state.screen === 8
+        ? `${screen8RewardNote(state.segment)} ${m.note ?? ""}`.trim()
+        : m.note;
 
   return (
     <div className="flex flex-col gap-3">
@@ -207,7 +212,7 @@ export function PresenterPanel() {
           className="shrink-0 whitespace-nowrap rounded-full bg-navy px-3 py-1 text-[14px] font-bold text-white"
           aria-live="polite"
         >
-          Screen {m.no} of {SCREEN_COUNT}
+          {m.no === 0 ? "Home" : `Screen ${m.no} of ${SCREEN_COUNT}`}
         </div>
       </div>
 
@@ -249,6 +254,9 @@ export function PresenterPanel() {
               ? "She chose AutoPay on screen 4, so this month Paytm sends a heads-up before the debit instead of a Pay now reminder."
               : "She already chose AutoPay after her first payment, so there is nothing to offer here. Trade-off: earlier mandates, but it skips the trust-first rule of offering AutoPay after the 2nd payment."}
           </p>
+        ) : null}
+        {state.screen === 1 ? (
+          <p className="mt-2 rounded-xl bg-sky-soft px-3 py-2 text-[13px] font-semibold">{NEXT_BILL_LINE}</p>
         ) : null}
         {state.screen === 1 && state.toggles.paytmToday ? (
           <p className="mt-2 rounded-xl bg-warn-soft px-3 py-2 text-[13px] font-semibold text-warn">
@@ -296,7 +304,7 @@ export function PresenterPanel() {
       </div>
 
       <div className="rounded-2xl bg-white p-4 shadow-sm">
-        <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted">Segment (changes screen 1)</div>
+        <div className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-muted">Segment (changes home, screen 1 and the summary reward)</div>
         <div className="grid grid-cols-4 gap-1.5" role="radiogroup" aria-label="Segment">
           {segments.map((s) => (
             <button
@@ -308,7 +316,8 @@ export function PresenterPanel() {
               onClick={() => {
                 dispatch({ type: "SET_SEGMENT", segment: s.id });
                 if (state.toggles.paytmToday) dispatch({ type: "TOGGLE", key: "paytmToday" });
-                dispatch({ type: "GOTO", screen: 1 });
+                // A new segment starts from the home screen, where its For you offer shows.
+                dispatch({ type: "GOTO", screen: 0 });
               }}
               className={`rounded-lg border-2 py-1.5 text-[13px] font-bold transition ${
                 state.segment === s.id ? "border-sky bg-sky-soft" : "border-line hover:border-sky/50"
@@ -347,12 +356,22 @@ function EventLog() {
         <ul className="max-h-48 space-y-1 overflow-y-auto no-scrollbar">
           {events.map((e) => (
             <li key={e.id} className="anim-rise">
-              <span className="text-[#8aa3c7]">S{e.screen}</span> <span className="text-sky">{e.name}</span>
+              <span className="text-[#8aa3c7]">{e.screen === 0 ? "Home" : `S${e.screen}`}</span>{" "}
+              <span className="text-sky">{e.name}</span>
+              {S4_SIGNAL_EVENTS.includes(e.name) ? (
+                <span className="ml-1 rounded bg-[#ffd56b]/20 px-1 font-sans text-[10px] font-semibold text-[#ffd56b]">S4 signal</span>
+              ) : null}
               {e.detail ? <span className="text-[#8aa3c7]"> {e.detail}</span> : null}
             </li>
           ))}
         </ul>
       )}
+      {events.some((e) => S4_SIGNAL_EVENTS.includes(e.name)) ? (
+        <p className="mt-2 font-sans text-[11px] leading-snug text-[#8aa3c7]">
+          <span className="font-semibold text-[#ffd56b]">S4 signals: how Paytm spots a rewards cardholder.</span> Not success
+          metrics.
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -10,12 +10,15 @@ export function RewardsPopup({
   card,
   amount,
   bonus,
+  yearTotal,
   onClose,
 }: {
   card: SavedCard;
   amount: number;
   /** Test 4 card rewards group: Paytm's extra bonus on top of the card's own reward. */
   bonus?: string;
+  /** S4 card points tracker: points earned paying bills here this year. */
+  yearTotal?: number;
   onClose: () => void;
 }) {
   return (
@@ -30,6 +33,11 @@ export function RewardsPopup({
         <p className="mt-1.5 text-[14px] leading-snug text-muted">
           Earned on this bill with your {card.name} •• {card.last4}.
         </p>
+        {yearTotal ? (
+          <p className="mt-2 text-[13px] font-semibold text-navy">
+            This year: {yearTotal.toLocaleString("en-IN")} points from bills paid here
+          </p>
+        ) : null}
         {bonus ? <p className="mt-2 rounded-xl bg-warn-soft px-3 py-2 text-[13px] font-semibold text-warn">Plus {bonus}</p> : null}
         <Button className="mt-5" onClick={onClose}>
           Great
