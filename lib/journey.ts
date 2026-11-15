@@ -301,7 +301,8 @@ export function reducer(s: JourneyState, a: Action): JourneyState {
   }
 }
 
-export const STORAGE_KEY = "paytm-recharge-journey-v2";
+// Bump this when the journey changes shape, so a saved place from an older version is ignored.
+export const STORAGE_KEY = "paytm-recharge-journey-v3";
 
 export function parseStored(raw: string | null): JourneyState | null {
   if (!raw) return null;
